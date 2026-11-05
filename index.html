@@ -72,7 +72,7 @@
   .btn:hover { transform: translateY(-1px); }
   .btn svg { width: 18px; height: 18px; }
   .btn.sm { padding: 10px 14px; font-size: 14px; }
-  .btn.soon { background: transparent; color: var(--ink); border: 1.5px dashed var(--muted); cursor: default; transform: none; }
+  .btn.soon { background: transparent; color: var(--ink); border: 1.5px dashed var(--muted); transform: none; }
 
   /* hero: the capture overlay */
   .hero { background: var(--dim); padding-block: 64px 88px; position: relative; overflow: hidden; }
@@ -239,6 +239,15 @@
   .dock:hover .tip, .dock:focus-visible .tip { opacity: 1; }
   @keyframes ring { 0% { box-shadow: 0 10px 26px rgba(0,0,0,.35), 0 0 0 0 rgba(39,80,216,.5); } 70%, 100% { box-shadow: 0 10px 26px rgba(0,0,0,.35), 0 0 0 18px rgba(39,80,216,0); } }
   @media (max-width: 600px) { .dock { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 54px; height: 54px; } .dock .tip { display: none; } }
+
+  /* "launching soon" message shown when a Store button is tapped before launch */
+  .toast { position: fixed; z-index: 50; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); max-width: min(440px, calc(100vw - 40px));
+    display: flex; align-items: center; gap: 12px; background: var(--ink); color: var(--paper); padding: 14px 18px; border-radius: 6px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.3); font: 600 15px/1.35 var(--font-body);
+    transform: translate(-50%, 16px); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast svg { width: 22px; height: 22px; flex: none; }
+  @media (max-width: 600px) { .toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); } }
 </style>
 </head>
 <body>
@@ -420,6 +429,8 @@
   </div>
 </footer>
 
+<div class="toast" id="toast" role="status" aria-live="polite"><svg aria-hidden="true"><use href="#logo"/></svg><span>SnipRail is launching on the Microsoft Store soon.</span></div>
+
 <button class="dock" type="button" id="dock" aria-label="Jump to the search demo"><svg aria-hidden="true"><use href="#mark"/></svg><span class="badge">1</span><span class="tip">That's SnipRail. Tap it.</span></button>
 
 <script>
@@ -557,19 +568,31 @@
     setTimeout(() => q.focus({ preventScroll: true }), 500);
   });
 
-  // Store buttons: live link once STORE_ID is set, "Coming soon" until then.
+  // Store buttons: live link once STORE_ID is set. Until then they say "Coming soon"
+  // and tapping any of them shows the launching-soon message.
   const live = STORE_ID.trim().length > 0;
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  function soon(e) {
+    e.preventDefault();
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+  }
   document.querySelectorAll('.store-link').forEach(a => {
     if (live) {
       a.href = 'https://apps.microsoft.com/detail/' + STORE_ID.trim();
       a.target = '_blank';
       a.rel = 'noopener';
-    } else if (a.classList.contains('store-main')) {
+      return;
+    }
+    if (a.classList.contains('store-main')) {
       a.classList.add('soon');
-      a.removeAttribute('href');
       a.setAttribute('aria-disabled', 'true');
       a.querySelector('span').textContent = 'Coming soon to Microsoft Store';
     }
+    a.setAttribute('role', 'button');
+    a.addEventListener('click', soon);
   });
 </script>
 </body>
